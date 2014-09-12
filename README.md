@@ -1,4 +1,4 @@
-sentiment_rntn_gpu
+Recursive Neural Tensor Network on GPU
 ==================
 
 GPU implementation of Recursive Neural Tensor Network for sentiment analysis
