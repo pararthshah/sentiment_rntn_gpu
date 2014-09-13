@@ -35,48 +35,37 @@ CudaInterface::cleanup() {
 /***** Memory Management *****/
 /*****************************/
 
-float*
-CudaInterface::allocMem(unsigned int size) {
-    float* mem;
-    checkCudaErrors(cudaMalloc((void **) &mem, size * sizeof(float)));
-    return mem;
+void
+CudaInterface::allocMem(float** mem, unsigned int size, bool device) {
+    if (device)
+        checkCudaErrors(cudaMalloc((void **) mem, size * sizeof(float)));
+    else
+        *mem = (float*) malloc(size * sizeof(float));
 }
 
 void
-CudaInterface::freeMem(float* mem) {
-    checkCudaErrors(cudaFree(mem));
-}
-
-cMirrorMem_t
-CudaInterface::allocMirrorMem(unsigned int size) {
-    cMirrorMem_t mmem;
-    unsigned int mem_size = size * sizeof(float);
-    mmem.host = (float *) malloc(mem_size);
-    checkCudaErrors(cudaMalloc((void **) &(mmem.device), mem_size));
-    mmem.size = size;
-    return mmem;
+CudaInterface::freeMem(float* mem, bool device) {
+    if (device)
+        checkCudaErrors(cudaFree(mem));
+    else
+        free(mem);
 }
 
 void
-CudaInterface::freeMirrorMem(cMirrorMem_t mmem, unsigned int flag) {
-    if (flag == 1 || flag == 3)
-        free(mmem.host);
-    if (flag == 2 || flag == 3) 
-        checkCudaErrors(cudaFree(mmem.device));
-}
+CudaInterface::transferMem(cParamMem_t pmem1, cParamMem_t pmem2, bool device1, bool device2) {
+    cudaMemcpyKind kind;
+    if (device1 && device2) kind = cudaMemcpyDeviceToDevice;
+    else if (!device1 && device2) kind = cudaMemcpyDeviceToHost;
+    else if (device1 && !device2) kind = cudaMemcpyHostToDevice;
+    else  kind = cudaMemcpyHostToHost;
 
-void
-CudaInterface::copyHostToDevice(cMirrorMem_t mmem) {
-    checkCudaErrors(cudaMemcpy(mmem.device, mmem.host, mmem.size * sizeof(float), cudaMemcpyHostToDevice));
-}
-
-void
-CudaInterface::copyDeviceToHost(cMirrorMem_t mmem) {
-    checkCudaErrors(cudaMemcpy(mmem.host, mmem.device, mmem.size * sizeof(float), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(pmem1.base, pmem2.base, pmem1.totalSize * sizeof(float), kind));
 }
 
 void
 CudaInterface::allocParamMem(cParamMem_t& pmem, unsigned wordDim, unsigned numClasses, unsigned numWords, bool device) {
+    checkCudaErrors(cudaSetDevice(mDevID));
+    checkCudaErrors(cudaGetDevice(&mDevID));
     pmem.wordDim = wordDim;
     pmem.numClasses = numClasses;
     pmem.numWords = numWords;
@@ -87,11 +76,7 @@ CudaInterface::allocParamMem(cParamMem_t& pmem, unsigned wordDim, unsigned numCl
     pmem.totalSize += numWords * wordDim; // 5*33+32*65+4*1024*32+16582*32
     if (device) {
         cudaEvent_t sync_event;
-        // checkCudaErrors(cudaEventCreate(&sync_event));
         checkCudaErrors(cudaMalloc((void **) &(pmem.base), pmem.totalSize * sizeof(float)));
-        checkCudaErrors(cudaThreadSynchronize());
-        // checkCudaErrors(cudaEventRecord(sync_event));
-        // checkCudaErrors(cudaEventSynchronize(sync_event));
     } else {
         pmem.base = (float*) malloc(pmem.totalSize * sizeof(float));
     }
@@ -104,20 +89,24 @@ CudaInterface::allocParamMem(cParamMem_t& pmem, unsigned wordDim, unsigned numCl
 
 void
 CudaInterface::freeParamMem(cParamMem_t& pmem) {
+    checkCudaErrors(cudaSetDevice(mDevID));
+    checkCudaErrors(cudaGetDevice(&mDevID));
     if (pmem.device)
         checkCudaErrors(cudaFree(pmem.base));
     else
         free(pmem.base);
-    pmem.base = nullptr;
-    pmem.softmaxW = nullptr;
-    pmem.transformW = nullptr;
-    pmem.transformV = nullptr;
-    pmem.wordVectors = nullptr;
+    pmem.base = NULL;
+    pmem.softmaxW = NULL;
+    pmem.transformW = NULL;
+    pmem.transformV = NULL;
+    pmem.wordVectors = NULL;
 }
 
 void
 CudaInterface::fillParamMem(cParamMem_t& pmem, int byteVal) {
-    printf("setting %ld bytes at %x\n", pmem.totalSize * sizeof(float), pmem.base);
+    checkCudaErrors(cudaSetDevice(mDevID));
+    checkCudaErrors(cudaGetDevice(&mDevID));
+    printf("  setting %ld bytes at %x\n", pmem.totalSize * sizeof(float), pmem.base);
     if (pmem.device) {
         checkCudaErrors(cudaThreadSynchronize());
         checkCudaErrors(cudaMemset(pmem.base, byteVal, pmem.totalSize * sizeof(float)));
@@ -132,6 +121,8 @@ CudaInterface::fillParamMem(cParamMem_t& pmem, int byteVal) {
 
 int
 CudaInterface::cublasMatrixMult(float* A, float* B, float* C, cMatrixSize_t mSize) {
+    checkCudaErrors(cudaSetDevice(mDevID));
+    checkCudaErrors(cudaGetDevice(&mDevID));
     checkCudaErrors(cublasSgemm(mCublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, mSize.uiWB, mSize.uiHA, 
                                 mSize.uiWA, &mAlpha, B, mSize.uiWB, A, mSize.uiWA, &mBeta, C, mSize.uiWA));
     return 0;

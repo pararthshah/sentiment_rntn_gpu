@@ -15,19 +15,22 @@ int main(int argc, char** argv) {
     // model parameters
     int wordDim = 32;
     int numClasses = 5;
-    SentimentTraining trainer(trainPath, devPath, wordDim, numClasses);
 
     // training parameters
-    sTrainingOptions_t options = {
+    sOptions_t options = {
+        trainPath,
+        devPath,
         25,
-        1,
+        2,
         0.01,
         0.0001,
         0.001,
         0.001,
         0.0001
     };
-    trainer.train(options);
+
+    SentimentTraining trainer(options, wordDim, numClasses);
+    trainer.train();
 
     return 0;
 }

@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <algorithm>
+#include <fstream>
 
 #include "cuda_interface.h"
 
@@ -19,7 +20,7 @@ Tree::Tree(const std::string& treeStr) {
         std::exit(1);
     }
 
-    mGoldClass = std::stoi(treeStr.substr(1, 2));
+    mGoldClass = std::atoi(treeStr.substr(1, 2).c_str());
     if (treeStr[3] != '(') {
         mIsLeaf = true;
         mLabel = treeStr.substr(3, strLength-4);
@@ -48,21 +49,86 @@ Tree::Tree(const std::string& treeStr) {
 }
 
 void
+Tree::getLeafWords(std::set<std::string>& words) {
+    if (mIsLeaf) {
+        //printf("%s\n", tree->mLabel.c_str());
+        if (!mLabel.empty()) {
+            words.insert(mLabel);
+        }
+    } else {
+        if (mLeftChild != NULL) mLeftChild->getLeafWords(words);
+        if (mRightChild != NULL) mRightChild->getLeafWords(words);
+    }
+}
+
+void
+Tree::assignNodeVectorsAndId(const std::map<std::string, int>& wordToIds, int unseenWordId,
+    unsigned int wordDim, unsigned int numClasses) {
+    if (mIsLeaf) {
+        std::map<std::string, int>::const_iterator it = wordToIds.find(mLabel);
+        if (it != wordToIds.end()) {
+            mWordId = it->second;
+        } else {
+            mWordId = unseenWordId;
+        }
+    } else {
+        // CudaInterface::allocMem(&mPredictedClassDist_d, numClasses);
+        // CudaInterface::allocMem(&mNodeVector_d, wordDim);
+        if (mLeftChild != NULL)
+            mLeftChild->assignNodeVectorsAndId(wordToIds, unseenWordId, wordDim, numClasses);
+        if (mRightChild != NULL)
+            mRightChild->assignNodeVectorsAndId(wordToIds, unseenWordId, wordDim, numClasses);
+    }   
+}
+
+void
 Tree::cleanUp() {
-    if (mLeftChild != nullptr) {
+    if (mLeftChild != NULL) {
         mLeftChild->cleanUp();
-        mLeftChild = nullptr;
+        mLeftChild = NULL;
     }
-    if (mRightChild != nullptr) {
+    if (mRightChild != NULL) {
         mRightChild->cleanUp();
-        mRightChild = nullptr;
+        mRightChild = NULL;
     }
-    if (mNodeVector_d != nullptr) {
-        CudaInterface::freeMem(mNodeVector_d);
-        mNodeVector_d = nullptr;
+    // if (mNodeVector_d != NULL) {
+    //     CudaInterface::freeMem(mNodeVector_d);
+    //     mNodeVector_d = NULL;
+    // }
+    // if (mPredictedClassDist_d != NULL) {
+    //     CudaInterface::freeMem(mPredictedClassDist_d);
+    //     mPredictedClassDist_d = NULL;
+    // }
+}
+
+void
+Tree::readTrees(std::vector<Tree*>& trees, const std::string& path) {
+    std::ifstream fs(path.c_str());
+    std::string line;
+    while(std::getline(fs, line)) {
+        //printf("parsing line: %s\n", line.c_str());
+        trees.push_back(new Tree(line));
     }
-    if (mPredictedClassDist_d != nullptr) {
-        CudaInterface::freeMem(mPredictedClassDist_d);
-        mPredictedClassDist_d = nullptr;
+}
+
+void
+Tree::getAllLeafWords(std::vector<Tree*>& trees, std::set<std::string>& words) {
+    for (int i = 0; i < trees.size(); i++) {
+        trees[i]->getLeafWords(words);
+    }
+}
+
+void
+Tree::assignAllNodeVectorsAndId(std::vector<Tree*>& trees, const std::map<std::string, int>& wordToIds,
+  int unseenWordId, unsigned int wordDim, unsigned int numClasses) {
+    for (int i = 0; i < trees.size(); i++) {
+        trees[i]->assignNodeVectorsAndId(wordToIds, unseenWordId, wordDim, numClasses);
+    }
+}
+
+void
+Tree::cleanupTrees(std::vector<Tree*>& trees) {
+    for (int i = 0; i < trees.size(); i++) {
+        trees[i]->cleanUp();
     }
 }

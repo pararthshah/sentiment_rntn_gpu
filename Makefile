@@ -47,13 +47,13 @@ NVCC := $(CUDA_PATH)/bin/nvcc -ccbin $(GCC)
 
 # internal flags
 NVCCFLAGS   := -m${OS_SIZE} ${ARCH_FLAGS}
-CCFLAGS     := -stdlib=libc++
+CCFLAGS     := -stdlib=libstdc++
 LDFLAGS     :=
 
 # Extra user flags
 EXTRA_NVCCFLAGS   ?=
 EXTRA_LDFLAGS     ?=
-EXTRA_CCFLAGS     ?= -std=c++11
+EXTRA_CCFLAGS     ?=
 
 # OS-specific build flags
 ifneq ($(DARWIN),)
@@ -103,11 +103,6 @@ ALL_CCFLAGS += $(EXTRA_NVCCFLAGS)
 ALL_CCFLAGS += $(addprefix -Xcompiler ,$(CCFLAGS))
 ALL_CCFLAGS += $(addprefix -Xcompiler ,$(EXTRA_CCFLAGS))
 
-ALT_CCFLAGS :=
-ALT_CCFLAGS += $(NVCCFLAGS)
-ALT_CCFLAGS += $(EXTRA_NVCCFLAGS)
-ALT_CCFLAGS += $(addprefix -Xcompiler ,-stdlib=libstdc++)
-
 ALL_LDFLAGS :=
 ALL_LDFLAGS += $(ALL_CCFLAGS)
 ALL_LDFLAGS += $(addprefix -Xlinker ,$(LDFLAGS))
@@ -150,24 +145,18 @@ cuda_interface.o: cuda_interface.cpp
 	$(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
 sentiment_kernels.o: sentiment_kernels.cu
-	$(NVCC) $(INCLUDES) $(ALT_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
-
-tree.o: tree.cpp
 	$(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-model.o: model.cpp
+tree.o: tree.cpp
 	$(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
 training.o: training.cpp
 	$(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-utils.o: utils.cpp
-	$(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
-
 rntn.o: rntn.cpp
 	$(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-rntn: cuda_interface.o sentiment_kernels.o tree.o utils.o model.o training.o rntn.o
+rntn: cuda_interface.o sentiment_kernels.o tree.o training.o rntn.o
 	$(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 
 run: build

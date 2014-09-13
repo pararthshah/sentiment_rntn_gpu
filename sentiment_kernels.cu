@@ -62,7 +62,7 @@ kernelRandomWordVectors(cParamMem_t& params, float threshold) {
     setupRandomVectorGen<<<numBlocks, threadsPerBlock>>>(devState, time(NULL), numElems);
     checkCudaErrors(cudaGetLastError());
     runRandomVectorGen<<<numBlocks, threadsPerBlock>>>(params.wordVectors, devState, threshold, numElems);
-    checkCudaErrors(cudaThreadSynchronize());
+    // checkCudaErrors(cudaThreadSynchronize());
     checkCudaErrors(cudaGetLastError());
     checkCudaErrors(cudaFree(devState));
 
@@ -90,7 +90,7 @@ kernelUpdateParams(cParamMem_t& params, cParamMem_t& derivatives,
     dim3 threadsPerBlock(blockSize, 1, 1);
     updateParams<<<numBlocks,threadsPerBlock>>>(params.base, derivatives.base,
         adagradWts.base, learningRate, params.totalSize);
-    checkCudaErrors(cudaThreadSynchronize());
+    // checkCudaErrors(cudaThreadSynchronize());
     checkCudaErrors(cudaGetLastError());
 
     // checkCudaErrors(cudaEventRecord(sync_event));
@@ -100,3 +100,24 @@ kernelUpdateParams(cParamMem_t& params, cParamMem_t& derivatives,
     double t2=tim.tv_sec+(tim.tv_usec/1000000.0);
     printf("Update params time: %f\n", t2-t1);
 }
+
+void
+kernelForwardPropNode() {
+
+}
+
+void
+kernelForwardPropLeaf() {
+
+}
+
+void
+kernelBackPropNode() {
+
+}
+
+void
+kernelBackPropLeaf() {
+
+}
+

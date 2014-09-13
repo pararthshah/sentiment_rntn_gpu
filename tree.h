@@ -2,6 +2,9 @@
 #define TREE_H
 
 #include <string>
+#include <vector>
+#include <set>
+#include <map>
 
 class Tree {
   public:
@@ -11,23 +14,32 @@ class Tree {
     int mPredictedClass;
     float* mPredictedClassDist_d;
 
-    int wordId;
+    int mWordId;
     float* mNodeVector_d; // this is stored in device memory
 
     Tree* mLeftChild;
     Tree* mRightChild;
 
     Tree() {
-        mLeftChild = nullptr;
-        mRightChild = nullptr;
-        mPredictedClassDist_d = nullptr;
-        mNodeVector_d = nullptr;
-        wordId = -1;
+        mLeftChild = NULL;
+        mRightChild = NULL;
+        mPredictedClassDist_d = NULL;
+        mNodeVector_d = NULL;
+        mWordId = -1;
     }
 
     Tree(const std::string& treeStr);
 
+    void getLeafWords(std::set<std::string>& words);
+    void assignNodeVectorsAndId(const std::map<std::string, int>& wordToIds, int unseenWordId,
+      unsigned int wordDim, unsigned int numClasses);
     void cleanUp();
+
+    static void readTrees(std::vector<Tree*>& trees, const std::string& path);
+    static void getAllLeafWords(std::vector<Tree*>& trees, std::set<std::string>& words);
+    static void assignAllNodeVectorsAndId(std::vector<Tree*>& trees, const std::map<std::string, int>& wordToIds,
+      int unseenWordId, unsigned int wordDim, unsigned int numClasses);
+    static void cleanupTrees(std::vector<Tree*>& trees);
 };
 
 #endif // TREE_H

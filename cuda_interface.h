@@ -15,13 +15,9 @@ class CudaInterface {
     static void cleanup();
 
     /***** Host/Device Memory Management *****/
-    static float* allocMem(unsigned int size);
-    static void freeMem(float* mem);
-
-    static cMirrorMem_t allocMirrorMem(unsigned int size);
-    static void freeMirrorMem(cMirrorMem_t mmem, unsigned int flag);
-    static void copyHostToDevice(cMirrorMem_t mmem);
-    static void copyDeviceToHost(cMirrorMem_t mmem);
+    static void allocMem(float** mem, unsigned int size, bool device);
+    static void freeMem(float* mem, bool device);
+    static void transferMem(cParamMem_t pmem1, cParamMem_t pmem2, bool device1, bool device2);
 
     static void allocParamMem(cParamMem_t& pmem, unsigned wordDim, unsigned numClasses, unsigned numWords, bool device);
     static void freeParamMem(cParamMem_t& pmem);

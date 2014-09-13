@@ -35,4 +35,10 @@ void kernelRandomWordVectors(cParamMem_t& params, float threshold);
 void kernelUpdateParams(cParamMem_t& params, cParamMem_t& derivatives,
   cParamMem_t& adagradWts, float learningRate);
 
+void kernelForwardPropNode();
+void kernelForwardPropLeaf();
+
+void kernelBackPropNode();
+void kernelBackPropLeaf();
+
 #endif // SENTIMENT_KERNELS_H
